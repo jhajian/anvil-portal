@@ -44,11 +44,12 @@
         // workspaceNames = ["AnVIL_CCDG_WashU_CVD_EOCAD_BioMe_WGS", "ANVIL_CMG_Broad_Muscle_Laing_WES"];
 
         const promises = [];
-        workspaceNames.forEach(workspaceName => {
+        workspaceNames.forEach(workspace => {
 
             const callback = (data) => {
                 return {
-                    workspaceName,
+                    workspaceName: workspace.workspaceName,
+                    bucketName: workspace.bucketName,
                     discoveryCount: data.discovery?.count || 0,
                     familyCount: data.family?.count || 0,
                     participantCount: data.participant?.count || 0,
@@ -56,7 +57,7 @@
                     subjectCount: data.subject?.count || 0,
                 };
             };
-            const url = `${URL_WORKSPACES}/${NAMESPACE_ANVIL_DATA_STORAGE}/${workspaceName}/entities`;
+            const url = `${URL_WORKSPACES}/${NAMESPACE_ANVIL_DATA_STORAGE}/${workspace.workspaceName}/entities`;
             promises.push(fetch(url, callback));
         });
 
@@ -75,7 +76,10 @@
                     return workspaceConfig.workspace.namespace === NAMESPACE_ANVIL_DATA_STORAGE;
                 })
                 .map((workspaceConfig) => {
-                    return workspaceConfig.workspace.name;
+                    return {
+                             workspaceName: workspaceConfig.workspace.name,
+                             bucketName: workspaceConfig.workspace.bucketName
+                    }
                 });
         };
         
@@ -103,10 +107,11 @@
                     .then(fetchWorkspaceCounts)
                     .then((workspaceCounts) => {
                         const csvRows =
-                            ["<div>Workspace,Discovery Count,Family Count,Participant Count,Sample Count,Subject Count</div>"];
+                            ["<div>Workspace,Bucket Name,Discovery Count,Family Count,Participant Count,Sample Count,Subject Count</div>"];
                         workspaceCounts.forEach(workspaceCount => {
                             const csvRow = [
                                 workspaceCount.workspaceName,
+                                workspaceCount.bucketName,
                                 workspaceCount.discoveryCount,
                                 workspaceCount.familyCount,
                                 workspaceCount.participantCount,
