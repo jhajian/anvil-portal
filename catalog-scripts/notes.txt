@@ -1,6 +1,7 @@
 cut -d , -f 1,2 minioutput.csv
 while read in; do ./bucketsize.sh "$in"; done < output.csv > withFileSize.csv
 while read in; do ./bucketsize.sh "$in"; done < minioutput.csv
+while read in; do ./rp.sh "$in"; done < minioutput.csv
 
 
  gsutil -u anvil-and-terra-development  ls -r gs://fc-secure-4dda26e8-0e9d-4162-a8b3-73c65b82ef31 | grep -v /:$ | grep -v ^$ | wc -l
@@ -13,4 +14,4 @@ grep -v /:$ remove directories in gs util output
 https://github.com/anvilproject/client-apis/blob/763826e8db92648902765bcd36035e1d89e2d3f3/pyAnVIL/docs/_static/0.0.2.ipynb
 
 
-
+cut  -d is delimeter -f is field
