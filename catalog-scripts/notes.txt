@@ -1,5 +1,6 @@
 cut -d , -f 1,2 minioutput.csv
 while read in; do ./bucketsize.sh "$in"; done < output.csv > withFileSize.csv
+while read in; do ./bucketsize.sh "$in"; done < output-2021-04-20.csv > withFileSize-2021-04-20.csv
 while read in; do ./bucketsize.sh "$in"; done < minioutput.csv
 while read in; do ./rp.sh "$in"; done < minioutput.csv
 
