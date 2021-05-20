@@ -16,6 +16,7 @@ const {cacheFile, readFile} = require(path.resolve(__dirname, "./dashboard-file-
 // Template dependencies
 const dirCacheFHIR = "../../db-gap-cache";
 const FHIR_FIELD_KEY = {
+    "CONDITIONS": "conditions",
     "CONSENT_CODES": "consentCodes",
     "DATA_TYPES": "dataTypes",
     "DISEASES": "diseases",
@@ -88,6 +89,9 @@ function buildFHIRStudy(fhirJSON, study) {
             /* Grab the resource extensions. */
             const {resource} = entry || {};
 
+            /* Roll up the conditions (name and corresponding code). */
+            const conditions = rollUpConditions(resource, acc);
+
             /* Roll up the consent codes. */
             const consentCodes = rollUpConsentCodes(resource, acc);
 
@@ -105,6 +109,7 @@ function buildFHIRStudy(fhirJSON, study) {
 
             /* Accumulate the values. */
             return Object.assign(acc, {
+                [FHIR_FIELD_KEY.CONDITIONS]: conditions,
                 [FHIR_FIELD_KEY.CONSENT_CODES]: consentCodes,
                 [FHIR_FIELD_KEY.DATA_TYPES]: dataTypes,
                 [FHIR_FIELD_KEY.DISEASES]: diseases,
@@ -295,6 +300,7 @@ function getStudyName(entries) {
 function initializeStudy() {
 
     return {
+        [FHIR_FIELD_KEY.CONDITIONS]: [],
         [FHIR_FIELD_KEY.CONSENT_CODES]: [],
         [FHIR_FIELD_KEY.DATA_TYPES]: [],
         [FHIR_FIELD_KEY.DISEASES]: [],
@@ -387,6 +393,48 @@ async function readCacheFHIR(dbGapIdAccession) {
         return await JSON.parse(content);
     }
 }
+
+/**
+ * Returns the conditions and corresponding codes for the study.
+ *
+ * @param resource
+ * @param acc
+ * @returns {*}
+ */
+function rollUpConditions(resource, acc) {
+
+    /* Grab any accumulated conditions. */
+    const conditions = acc[FHIR_FIELD_KEY.CONDITIONS];
+
+    if ( resource ) {
+
+        if ( resource.condition ) {
+
+            return resource.condition.reduce((acc, condition) => {
+
+                /* Grab the coding array. */
+                const codings = condition?.coding;
+
+                if ( codings ) {
+
+                    codings.forEach(coding => {
+
+                        const {code, display} = coding || {};
+                        const key = code.trim();
+                        const value = display.trim();
+
+                        acc.push({code: key, display: value});
+                    })
+                }
+
+                return acc;
+            }, conditions)
+        }
+    }
+
+    return conditions;
+}
+
 
 /**
  * Returns the consent codes for the study.

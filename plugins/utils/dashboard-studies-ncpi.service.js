@@ -10,6 +10,7 @@ const path = require("path");
 
 // App dependencies
 const {parseRows, readFile, splitContentToContentRows} = require(path.resolve(__dirname, "./dashboard-file-system.service.js"));
+const {dashboardReportConditionCodes} = require(path.resolve(__dirname, "./dashboard-report.service.js"));
 const {sortDataByDuoTypes} = require(path.resolve(__dirname, "./dashboard-sort.service.js"));
 const {getUrlStudy} = require(path.resolve(__dirname, "./dashboard-studies-db-gap.service.js"));
 const {getFHIRStudy} = require(path.resolve(__dirname, "./dashboard-studies-fhir.service.js"));
@@ -52,8 +53,17 @@ const getNCPIStudies = async function getNCPIStudies() {
     /* Make the studies distinct; some platforms share the same study. */
     const studyPlatforms = getDistinctStudies(rows);
 
+    /* Reporting - `conditions` property. */
+    /* Begin. */
     /* Build the studies dashboard. */
     const studies = await buildDashboardStudies(studyPlatforms);
+
+    /* Output the conditions and corresponding codes to a TSV file. */
+    await dashboardReportConditionCodes(studies);
+
+    /* Delete the conditions property. */
+    studies.forEach(study => delete study.conditions);
+    /* End. */
 
     /* Return the sorted studies. */
     return sortDataByDuoTypes([...studies], "platform", "studyName");
@@ -107,6 +117,7 @@ async function buildDashboardStudy(gapIdPlatform) {
     const studyUrl = getUrlStudy(dbGapIdAccession);
 
     /* Assemble the study variables. */
+    const conditions = study.conditions;
     const consentCodes = study.consentCodes;
     const dataTypes = study.dataTypes;
     const diseases = study.diseases;
@@ -118,6 +129,7 @@ async function buildDashboardStudy(gapIdPlatform) {
     const subjectsTotal = study.subjectsTotal;
 
     return {
+        conditions: conditions,
         consentCodes: consentCodes,
         dataTypes: dataTypes,
         dbGapIdAccession: dbGapIdAccession,

@@ -95,5 +95,10 @@ plugins/gatsby-plugin-workspace-fields-report/prod-workspaces-sb-all.json
 # Dashboard Report AnVIL Studies
 static/dashboard-report-anvil-studies.csv
 
+# Dashboard Report Condition Codes
+cache-reports/
+cache-reports/dashboard-report.csv
+cache-reports/dashboard-report.tsv
+
 # Keys
 keys.sh
