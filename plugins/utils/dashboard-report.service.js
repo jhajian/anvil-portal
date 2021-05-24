@@ -25,14 +25,14 @@ const dashboardReportConditionCodes = async function dashboardReportConditionCod
     if ( studies ) {
 
         /* Grab all conditions by code. */
-        const conditionsByCode = getConditionsByCode(studies);
+        const setOfConditionsByCode = getSetOfConditionsByCode(studies);
 
         /* Convert the conditions by code into cacheable content. */
-        const content = buildCacheContent(conditionsByCode);
+        const content = buildCacheContent(setOfConditionsByCode);
 
         /* If the file does not exist, it will be created. */
-        /* See https://nodejs.org/api/fs.html#fs_file_system_flags {"flag": "as+"}. */
-        await cacheFile(fileReport, content, {"flag": "as+"});
+        /* See https://nodejs.org/api/fs.html#fs_file_system_flags {"flag": "w"}. */
+        await cacheFile(fileReport, content, {"flag": "w"});
     }
 }
 
@@ -40,38 +40,53 @@ const dashboardReportConditionCodes = async function dashboardReportConditionCod
  * Returns cacheable content.
  * Converts each map object into a comma separated string representing a single row.
  *
- * @param conditionsByCode
+ * @param setOfconditionsByCode
  * @returns {*}
  */
-function buildCacheContent(conditionsByCode) {
+function buildCacheContent(setOfconditionsByCode) {
 
-    return [...conditionsByCode].reduce((acc, [code, condition]) => {
+    return [...setOfconditionsByCode].reduce((acc, [code, setOfConditions]) => {
+
+        const listOfConditions = [...setOfConditions].join("; ");
 
         /* Make the row. */
-        const content = `${code}\t${condition}\r\n`;
+        const content = `${code}\t${listOfConditions}\r\n`;
 
         return acc.concat(content);
     }, "")
 }
 
 /**
- * Returns map object key-value pair of code and condition.
+ * Returns map object key-value pair of code and set of conditions.
  *
  * @param studies
  * @returns {*}
  */
-function getConditionsByCode(studies) {
+function getSetOfConditionsByCode(studies) {
 
-    return studies.reduce((acc, study) => {
+    return studies
+      .map(study => study?.conditions)
+      .reduce((acc, condition) => acc.concat(condition))
+      .reduce((acc, condition) => {
 
-        study.conditions?.forEach(condition => {
+        const {code, display} = condition;
+        const key = code?.split(" ").shift();
 
-            const {code, display} = condition;
-            acc.set(code, display);
-        });
+        if ( !acc.has(key) ) {
+
+          const setOfConditions = new Set();
+          setOfConditions.add(display);
+          acc.set(key, setOfConditions);
+        }
+        else {
+
+          const setOfConditions = acc.get(key);
+          setOfConditions.add(display);
+          acc.set(key, setOfConditions);
+        }
 
         return acc;
-    }, new Map());
+      }, new Map());
 }
 
 module.exports.dashboardReportConditionCodes = dashboardReportConditionCodes;
