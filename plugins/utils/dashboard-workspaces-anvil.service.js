@@ -27,6 +27,7 @@ const SOURCE_HEADER_KEY = {
     "PROJECT_ID": "name",
     "SAMPLES": "sample count",
     "SIZE": "file size",
+    "STUDY_DESIGNS": "library:studydesign",
     "SUBJECTS": "library:numsubjects",
     "WORKSPACE": "workspace"
 };
@@ -42,6 +43,7 @@ const SOURCE_FIELD_KEY = {
     [SOURCE_HEADER_KEY.PROJECT_ID]: "projectId",
     [SOURCE_HEADER_KEY.SAMPLES]: "samples",
     [SOURCE_HEADER_KEY.SIZE]: "size",
+    [SOURCE_HEADER_KEY.STUDY_DESIGNS]: "studyDesigns",
     [SOURCE_HEADER_KEY.SUBJECTS]: "subjects",
     [SOURCE_HEADER_KEY.WORKSPACE]: "projectId"
 };
@@ -54,6 +56,7 @@ const SOURCE_FIELD_TYPE = {
     [SOURCE_HEADER_KEY.PROJECT_ID]: "string",
     [SOURCE_HEADER_KEY.SAMPLES]: "number",
     [SOURCE_HEADER_KEY.SIZE]: "number",
+    [SOURCE_HEADER_KEY.STUDY_DESIGNS]: "array",
     [SOURCE_HEADER_KEY.SUBJECTS]: "number",
     [SOURCE_HEADER_KEY.WORKSPACE]: "string"
 };
@@ -191,6 +194,9 @@ function buildWorkspaces(attributeWorkspaces, countWorkspaces, studyPropertiesBy
         /* Build the property counts. */
         const countWorkspace = findCountWorkspace(row, countWorkspaces);
 
+        /* Reformat the property studyDesigns. */
+        const propertyStudyDesigns = reformatWorkspacePropertyList(row, SOURCE_FIELD_KEY[SOURCE_HEADER_KEY.STUDY_DESIGNS]);
+
         /* Grab the workspace file size. */
         const keyFileSize = SOURCE_FIELD_KEY[SOURCE_HEADER_KEY.SIZE];
         const size = countWorkspace[keyFileSize];
@@ -208,7 +214,8 @@ function buildWorkspaces(attributeWorkspaces, countWorkspaces, studyPropertiesBy
                 ...propertyDataTypes,
                 ...propertyDiseases,
                 ...propertyGapId,
-                ...propertyStudy
+                ...propertyStudyDesigns,
+                ...propertyStudy, /* FHIR study values, should they exist, overwrite any corresponding properties from AnVIL. */
             };
 
             /* Accumulate the workspace. */

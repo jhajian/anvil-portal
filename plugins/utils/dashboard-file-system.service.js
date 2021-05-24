@@ -89,7 +89,6 @@ const splitContentToContentRows = function splitContentToContentRows(content) {
         /* e.g. [first_line, second_line, third_line, and so on...]. */
         return content
             .toString()
-            .trim()
             .split(/\r?\n/);
     }
 
