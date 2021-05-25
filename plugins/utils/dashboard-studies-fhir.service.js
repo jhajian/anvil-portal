@@ -419,11 +419,12 @@ function rollUpConditions(resource, acc) {
 
                     codings.forEach(coding => {
 
-                        const {code, display} = coding || {};
-                        const key = code.trim();
-                        const value = display.trim();
+                        const {code, display, system} = coding || {};
 
-                        acc.push({code: key, display: value});
+                        acc.push({
+                          code: code.trim(),
+                          display: display.trim(),
+                          system: system.trim()});
                     })
                 }
 
