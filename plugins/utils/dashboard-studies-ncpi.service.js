@@ -11,7 +11,7 @@ const path = require("path");
 // App dependencies
 const {parseRows, readFile, splitContentToContentRows} = require(path.resolve(__dirname, "./dashboard-file-system.service.js"));
 const {sortDataByDuoTypes} = require(path.resolve(__dirname, "./dashboard-sort.service.js"));
-const {getUrlStudy} = require(path.resolve(__dirname, "./dashboard-studies-db-gap.service.js"));
+const {getStudyAccession, getStudyUrl} = require(path.resolve(__dirname, "./dashboard-studies-db-gap.service.js"));
 const {getFHIRStudy} = require(path.resolve(__dirname, "./dashboard-studies-fhir.service.js"));
 const {buildGapId} = require(path.resolve(__dirname, "./dashboard-study.service.js"));
 
@@ -20,22 +20,20 @@ const fileSource = "dashboard-source-ncpi.csv";
 const PLATFORM = {
     "ANVIL": "AnVIL",
     "BDC": "BDC",
+    "CRDC": "CRDC",
     "GMKF": "GMKF",
     "KFDRC": "KFDRC"
 };
 const SOURCE_HEADER_KEY = {
     "DB_GAP_ID": "identifier",
-    "DB_GAP_ID_ACCESSION": "study accession",
     "PLATFORM": "platform",
 };
 const SOURCE_FIELD_KEY = {
     [SOURCE_HEADER_KEY.DB_GAP_ID]: "dbGapId",
-    [SOURCE_HEADER_KEY.DB_GAP_ID_ACCESSION]: "dbGapIdAccession",
     [SOURCE_HEADER_KEY.PLATFORM]: "platform"
 };
 const SOURCE_FIELD_TYPE = {
     [SOURCE_HEADER_KEY.DB_GAP_ID]: "string",
-    [SOURCE_HEADER_KEY.DB_GAP_ID_ACCESSION]: "string",
     [SOURCE_HEADER_KEY.PLATFORM]: "string"
 };
 
@@ -98,13 +96,16 @@ async function buildDashboardStudies(gapIdPlatforms) {
  */
 async function buildDashboardStudy(gapIdPlatform) {
 
-    const {dbGapId, dbGapIdAccession, platforms} = gapIdPlatform;
+    const {dbGapId, platforms} = gapIdPlatform;
+
+    /* Grab the study accession, if it exists. */
+    const studyAccession = await getStudyAccession(dbGapId);
 
     /* Get any study related data from the FHIR JSON. */
-    const study = await getFHIRStudy(dbGapIdAccession);
+    const study = await getFHIRStudy(studyAccession);
 
     /* Get the db gap study url. */
-    const studyUrl = getUrlStudy(dbGapIdAccession);
+    const studyUrl = getStudyUrl(studyAccession);
 
     /* Assemble the study variables. */
     const consentCodes = study.consentCodes;
@@ -120,7 +121,7 @@ async function buildDashboardStudy(gapIdPlatform) {
     return {
         consentCodes: consentCodes,
         dataTypes: dataTypes,
-        dbGapIdAccession: dbGapIdAccession,
+        dbGapIdAccession: studyAccession,
         diseases: diseases,
         gapId: gapId,
         platform: studyPlatform,
@@ -144,37 +145,39 @@ function getDistinctStudies(rows) {
 
         /* Some platforms share the same study. */
         /* In this instance, we will add the additional platform to the existing study. */
-        const {dbGapId, dbGapIdAccession} = row;
+        const {dbGapId} = row;
 
-        if ( dbGapIdAccession ) {
+        /* Accumulate the study (or skip, if it has already been accumulated). */
+        if ( !isStudyListed(acc, dbGapId) ) {
 
-            /* Skip the study, if it has already been accumulated. */
-            const studyAccumulated = acc.find(s => s.dbGapIdAccession === dbGapIdAccession);
-
-            if ( studyAccumulated ) {
-
-                return acc;
-            }
-
-            /* Grab a set of platforms that share the same study. */
-            const setOfPlatforms = rows
-                .filter(study => study.dbGapIdAccession === dbGapIdAccession)
-                .reduce((acc, study) => {
-
-                    acc.add(study.platform);
-                    return acc;
-                }, new Set());
-
-            /* Sort the platforms by alpha. */
-            const platforms = [...setOfPlatforms];
-            platforms.sort();
+            /* Grab the platforms that share the same study. */
+            const platforms = getDistinctStudyPlatforms(rows, dbGapId);
 
             /* Accumulate the study. */
-            acc.push({dbGapId: dbGapId, dbGapIdAccession: dbGapIdAccession, platforms: platforms});
+            acc.push({dbGapId: dbGapId, platforms: platforms});
         }
 
         return acc;
     }, []);
+}
+
+/**
+ * Returns a list of platforms for the specified study id.
+ *
+ * @param rows
+ * @param studyId
+ * @returns {*[]}
+ */
+function getDistinctStudyPlatforms(rows, studyId) {
+
+    /* Grab a set of platforms that share the same study. */
+    const setOfPlatforms = getSetOfStudyPlatforms(rows, studyId)
+
+    /* Sort the platforms by alpha. */
+    const platforms = [...setOfPlatforms];
+    platforms.sort();
+
+    return platforms;
 }
 
 /**
@@ -194,6 +197,29 @@ function getPlatformDisplayValue(platform) {
     }
 
     return platform;
+}
+
+/**
+ * Returns a set of platforms for the specified study id.
+ *
+ * @param rows
+ * @param studyId
+ * @returns {Set<any>|*}
+ */
+function getSetOfStudyPlatforms(rows, studyId) {
+
+    if ( rows ) {
+
+        return rows
+            .filter(study => study.dbGapId === studyId)
+            .reduce((acc, study) => {
+
+                acc.add(study.platform);
+                return acc;
+            }, new Set());
+    }
+
+    return new Set();
 }
 
 /**
@@ -217,6 +243,21 @@ function getStudyPlatform(platforms) {
 function isStudyFieldsComplete(study) {
 
     return study.studyName && study.subjectsTotal;
+}
+
+/**
+ * Returns true if the studies has the specified study id.
+ *
+ * @param studies
+ * @param studyId
+ * @returns {*}
+ */
+function isStudyListed(studies, studyId) {
+
+    if ( studies ) {
+
+        return studies.some(study => study.dbGapId === studyId);
+    }
 }
 
 /**

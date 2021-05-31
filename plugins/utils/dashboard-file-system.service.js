@@ -23,7 +23,12 @@ const cacheFile = async function cacheFile(file, content, options = null) {
 
         const absPath = path.resolve(__dirname, file);
 
-        fs.writeFileSync(absPath, content, options);
+        try {
+
+            fs.writeFileSync(absPath, content, options);
+            console.log(`Caching ${file}`);
+        }
+        catch (err) {}
     }
 };
 
@@ -60,18 +65,12 @@ const parseRows = function parseRows(contentRows, delimiter = ",", FIELD, FIELD_
  */
 const readFile = async function readFile(file, options = null) {
 
-    /* Grab the file contents. */
-    if ( fs.existsSync(path.resolve(__dirname, file)) ) {
+    try {
 
         const filePath = path.resolve(__dirname, file);
-
-        return await fs.readFileSync(filePath, options);
+        return fs.readFileSync(filePath, options);
     }
-    else {
-
-        /* File does not exist. */
-        console.log(`File does not exist ${file}`);
-    }
+    catch (err) {}
 };
 
 /**
